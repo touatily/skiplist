@@ -12,16 +12,26 @@ class SLNode {
 
     SLNode* up;
     SLNode* down;
-    SLNode(T* val): val(val), next(nullptr), prev(nullptr), up(nullptr), down(nullptr) {}
+    
 
-    template<class U, class Compare, typename TRandom, int MaxLevel>
-    friend class skiplist;
+    //template<class U, class Compare, typename TRandom, int MaxLevel>
+    //friend class skiplist;
 
 public:
-    SLNode* get_up() { return up; }
-    SLNode* get_down() { return down; }
-    SLNode* get_next() { return next; }
-    SLNode* get_prev() { return prev; }
+    SLNode(T* val, SLNode* next=nullptr, SLNode* prev=nullptr, SLNode* up=nullptr, SLNode* down=nullptr): 
+            val(val), next(next), prev(prev), up(up), down(down) {}
+    
+    SLNode* get_up() const { return up; }
+    SLNode* get_down() const { return down; }
+    SLNode* get_next() const { return next; }
+    SLNode* get_prev() const { return prev; }
+
+    void set_up(SLNode* up) { this->up=up; }
+    void set_down(SLNode* down) { this->down=down; }
+    void set_next(SLNode* next) { this-> next=next; }
+    void set_prev(SLNode* prev) { this->prev=prev; }
+
+    const T& get_val() const { return *val; }
 
     friend std::ostream& operator<< (std::ostream& out, const SLNode<T>& n) {
         out << *(n.val);

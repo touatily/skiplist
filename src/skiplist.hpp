@@ -21,7 +21,6 @@ class skiplist {
 
 public:
     skiplist(double p=0.5);
-    //skiplist(const InputIterator& first, const InputIterator& last, double p=0.5);
     size_t size() const;
     bool exists(const T& e) const;
     void insert(const T& e);
@@ -107,7 +106,6 @@ public:
     void erase(iterator& it);
     iterator find(const T& e);
     const_iterator find(const T& e) const;
-
 };
 
 
@@ -307,6 +305,30 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, 
                 p = p->get_down();
             }
             return iterator(p);
+        }
+        p = p->get_down();
+    }
+    return end();
+}
+
+
+template<class T, class Compare, typename TRandom, int MaxLevel> 
+typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::find(const T& e) const {
+    SLNode<T>* p = levels.back();
+    if(p == nullptr) return end();
+    if(e < p->get_val()) return end();
+    if(p->get_val() == e) return begin();
+
+    while(p) {
+        while(p->get_next() && p->get_next()->get_val() < e) {
+            p = p->get_next();
+        }
+        if(p->get_next() && p->get_next()->get_val() == e) {
+            p = p->get_next();
+            while(p->get_down()) {
+                p = p->get_down();
+            }
+            return const_iterator(p);
         }
         p = p->get_down();
     }

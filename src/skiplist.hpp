@@ -41,14 +41,14 @@ public:
     public:
         iterator(SLNode<T>* c=nullptr): current(c) {}
 
-        const T& operator*() const { return *(current->val); }
+        const T& operator*() const { return current->get_val(); }
         //pointer operator->() { return m_ptr; }
 
-        iterator& operator++() { current = current->next; return *this; }  
-        iterator operator++(int) { iterator tmp = *this; current = current->next; return tmp; }
+        iterator& operator++() { current = current->get_next(); return *this; }  
+        iterator operator++(int) { iterator tmp = *this; current = current->get_next(); return tmp; }
 
-        iterator& operator--() { current = current->prev; return *this; }  
-        iterator operator--(int) { iterator tmp = *this; current = current->prev; return tmp; }
+        iterator& operator--() { current = current->get_prev(); return *this; }  
+        iterator operator--(int) { iterator tmp = *this; current = current->get_prev(); return tmp; }
 
         friend bool operator== (const iterator& a, const iterator& b)  { return a.current == b.current; };
         friend bool operator!= (const iterator& a, const iterator& b)  { return a.current != b.current; };
@@ -57,6 +57,9 @@ public:
     private:
         SLNode<T>* current;
     };
+
+    iterator begin() { return iterator(levels.front()); }
+    iterator end() { return iterator(nullptr); }
 
 
     class const_iterator 
@@ -285,6 +288,29 @@ const T& skiplist<T, Compare, TRandom, MaxLevel>::front() const {
 template<class T, class Compare, typename TRandom, int MaxLevel> 
 const T& skiplist<T, Compare, TRandom, MaxLevel>::back() const {
     return last->get_val();
+}
+
+template<class T, class Compare, typename TRandom, int MaxLevel> 
+typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, TRandom, MaxLevel>::find(const T& e) {
+    SLNode<T>* p = levels.back();
+    if(p == nullptr) return end();
+    if(e < p->get_val()) return end();
+    if(p->get_val() == e) return begin();
+
+    while(p) {
+        while(p->get_next() && p->get_next()->get_val() < e) {
+            p = p->get_next();
+        }
+        if(p->get_next() && p->get_next()->get_val() == e) {
+            p = p->get_next();
+            while(p->get_down()) {
+                p = p->get_down();
+            }
+            return iterator(p);
+        }
+        p = p->get_down();
+    }
+    return end();
 }
 
 #endif // SKIPLIST_H

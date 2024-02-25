@@ -21,6 +21,8 @@ class skiplist {
 
 public:
     skiplist(double p=0.5);
+    template <typename Iterator> skiplist(const Iterator& first, const Iterator& last, double p=0.5);
+
     size_t size() const;
     bool exists(const T& e) const;
     void insert(const T& e);
@@ -136,6 +138,43 @@ template<class T, class Compare, typename TRandom, int MaxLevel>
 skiplist<T, Compare, TRandom, MaxLevel>::skiplist(double p): levels(MaxLevel, nullptr), prob(p), nb(0),
         generator(std::chrono::system_clock::now().time_since_epoch().count()), last(nullptr) {}
 
+template<class T, class Compare, typename TRandom, int MaxLevel>
+template <typename Iterator>
+skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const Iterator& first, const Iterator& last, double p): levels(MaxLevel, nullptr), prob(p),
+        generator(std::chrono::system_clock::now().time_since_epoch().count()) {
+    
+    std::vector<T*> elements;
+    for(auto it=first; it != last; ++it) {
+        elements.push_back(&(*it));
+    }
+    sort(elements.begin(), elements.end(), [&](T* a, T* b) { return *a < *b; });
+
+
+    T* e = new T(*elements[0]);
+    levels[0] = new SLNode<T>(e);
+    for(int i=1; i < MaxLevel; i++) {
+        levels[i] = new SLNode<T>(e, nullptr, nullptr, nullptr, levels[i-1]);
+        levels[i-1]->set_up(levels[i]);
+    }
+
+    std::vector<SLNode<T>*> previous = levels;
+
+    for(int i=1; i < elements.size(); i++) {
+        if(*elements[i] != previous[0]->get_val()) {
+            e = new T(*elements[i]);
+            previous[0] = new SLNode<T>(e, nullptr, previous[0]);
+            previous[0]->get_prev()->set_next(previous[0]);
+            
+            nb++;
+            int j=1;
+            while(j < MaxLevel && generator() < (generator.max() + generator.min()) * this->prob) {
+                previous[j]->set_next(new SLNode<T>(e, nullptr, previous[j], nullptr, previous[j-1]));
+                previous[j] = previous[j]->get_next();
+                j++;
+            }
+        }
+    }
+}
 
 template<class T, class Compare, typename TRandom, int MaxLevel>
 size_t skiplist<T, Compare, TRandom, MaxLevel>::size() const {

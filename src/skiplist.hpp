@@ -11,6 +11,11 @@
 #include "slnode.hpp"
 
 
+enum orientation {
+    VERTICAL = 0,
+    HORIZONTAL
+};
+
 template<class T, class Compare = std::less<T>, typename TRandom = std::default_random_engine, int MaxLevel=10>
 class skiplist {
     std::vector<SLNode<T>*> levels;
@@ -26,7 +31,7 @@ public:
     size_t size() const;
     bool exists(const T& e) const;
     void insert(const T& e);
-    void sketch() const;
+    void sketch(orientation orient=VERTICAL) const;
 
     void erase(const T& e);
 
@@ -51,9 +56,10 @@ public:
         iterator& operator--() { current = current->get_prev(); return *this; }  
         iterator operator--(int) { iterator tmp = *this; current = current->get_prev(); return tmp; }
 
-        friend bool operator== (const iterator& a, const iterator& b)  { return a.current == b.current; };
-        friend bool operator!= (const iterator& a, const iterator& b)  { return a.current != b.current; };
+        friend bool operator== (const iterator& a, const iterator& b)  { return a.current == b.current; }
+        friend bool operator!= (const iterator& a, const iterator& b)  { return a.current != b.current; }
    
+        friend void skiplist<T, Compare, TRandom, MaxLevel>::erase(iterator it);
 
     private:
         SLNode<T>* current;
@@ -78,14 +84,7 @@ public:
         const_iterator operator--(int) { const_iterator tmp = *this; current = current->get_prev(); return tmp; }
 
         friend bool operator== (const const_iterator& a, const const_iterator& b)  { return a.current == b.current; };
-        friend bool operator!= (const const_iterator& a, const const_iterator& b)  { return a.current != b.current; };
-
-        /*
-        friend bool operator< (const const_iterator& a, const const_iterator& b)  { return *(a.current->val) < *(b.current->val); };     
-        friend bool operator> (const const_iterator& a, const const_iterator& b)  { return *(a.current->val) > *(b.current->val); };  
-        friend bool operator<= (const const_iterator& a, const const_iterator& b)  { return *(a.current->val) <= *(b.current->val); };
-        friend bool operator>= (const const_iterator& a, const const_iterator& b)  { return *(a.current->val) >= *(b.current->val); };         
-        */    
+        friend bool operator!= (const const_iterator& a, const const_iterator& b)  { return a.current != b.current; };  
 
     private:
         SLNode<T>* current;
@@ -105,7 +104,7 @@ public:
         return const_iterator(nullptr);
     }
 
-    void erase(iterator& it);
+    void erase(iterator it);
     iterator find(const T& e);
     const_iterator find(const T& e) const;
 };
@@ -121,16 +120,36 @@ void skiplist<T, Compare, TRandom, MaxLevel>::print() const {
 }
 
 template<class T, class Compare, typename TRandom, int MaxLevel>
-void skiplist<T, Compare, TRandom, MaxLevel>::sketch() const {
-    for(int i=0; i < levels.size(); i++) {
-        auto p = levels[i];
+void skiplist<T, Compare, TRandom, MaxLevel>::sketch(orientation orient) const {
 
+    auto p = levels.front();
+
+    switch(orient) {
+    case VERTICAL:
+        for(int i=0; i < MaxLevel; i++) {
+            auto p = levels[i];
+            while(p) {
+                std::cout << p->get_val() << " ";
+                p = p->get_next();
+            }
+            std::cout << std::endl;
+        }
+        break;
+    case HORIZONTAL:
         while(p) {
-            std::cout << p->get_val() << " ";
+            auto q = p;
+            while(q) {
+                std::cout << q->get_val() << " ";
+                q = q->get_up();
+            }
+            std::cout << std::endl;
+
             p = p->get_next();
         }
-        std::cout << std::endl;
+        break;
     }
+
+   
 }
 
 
@@ -169,7 +188,9 @@ skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const Iterator& first, const I
             int j=1;
             while(j < MaxLevel && generator() < (generator.max() + generator.min()) * this->prob) {
                 previous[j]->set_next(new SLNode<T>(e, nullptr, previous[j], nullptr, previous[j-1]));
+                previous[j-1]->set_up(previous[j]->get_next());
                 previous[j] = previous[j]->get_next();
+
                 j++;
             }
         }
@@ -249,6 +270,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::insert(const T& e) {
                 delete p;
                 p = tmp;
             }
+            nb++;
         } else {
             SLNode<T>* p = levels.back();
             bool found = false;
@@ -372,6 +394,50 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Com
         p = p->get_down();
     }
     return end();
+}
+
+
+template<class T, class Compare, typename TRandom, int MaxLevel> 
+void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare, TRandom, MaxLevel>::iterator it) {
+
+    if(it != end()) {
+        SLNode<T>* p = it.current;
+        if(it == begin()) {
+            if(p->get_next() == nullptr) {
+                for(int i=0; i < MaxLevel; i++) {
+                    delete levels[i];
+                    levels[i] = nullptr;
+                }
+            } else {
+                auto q = p->get_next();
+                delete levels[0];
+                levels[0] = q;
+                q->set_prev(nullptr);
+                for(int i=1; i < MaxLevel; i++) {
+                    if(! q->get_up()) {
+                        q->set_up(new SLNode<T>(*q));
+                        q->get_up()->set_down(q); 
+                        q->get_up()->set_next(levels[i]->get_next());
+                    } 
+                    
+                    q = q->get_up();
+                    q->set_prev(nullptr);
+                    delete levels[i];
+                    levels[i] = q; 
+                }
+            }
+        } else {
+            
+            while(p) {
+                auto tmp = p->get_up();
+                p->get_prev()->set_next(p->get_next());
+                if(p->get_next()) p->get_next()->set_prev(p->get_prev());
+                delete p;
+                p = tmp;
+            }
+        }
+        nb--;
+    }
 }
 
 #endif // SKIPLIST_H

@@ -402,6 +402,8 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
 
     if(it != end()) {
         SLNode<T>* p = it.current;
+        const T*  e = it.current->val;
+
         if(it == begin()) {
             if(p->get_next() == nullptr) {
                 for(int i=0; i < MaxLevel; i++) {
@@ -419,7 +421,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
                         q->get_up()->set_down(q); 
                         q->get_up()->set_next(levels[i]->get_next());
                     } 
-                    
+
                     q = q->get_up();
                     q->set_prev(nullptr);
                     delete levels[i];
@@ -437,6 +439,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
             }
         }
         nb--;
+        delete e;
     }
 }
 

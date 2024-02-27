@@ -4,6 +4,9 @@
 #include <random>
 #include <ostream>
 
+template<class U, class Compare, typename TRandom, int MaxLevel>
+class skiplist;
+
 template<class T> 
 class SLNode {
     const T* val;
@@ -32,6 +35,9 @@ public:
     void set_prev(SLNode* prev) { this->prev=prev; }
 
     const T& get_val() const { return *val; }
+    
+    template<class U, class Compare, typename TRandom, int MaxLevel>
+    friend void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare, TRandom, MaxLevel>::iterator it);
 
     friend std::ostream& operator<< (std::ostream& out, const SLNode<T>& n) {
         out << *(n.val);

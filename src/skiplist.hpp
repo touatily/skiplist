@@ -402,6 +402,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
 
     if(it != end()) {
         SLNode<T>* p = it.current;
+        if(p == last) last = last->get_prev();
         const T*  e = it.current->val;
 
         if(it == begin()) {
@@ -441,6 +442,12 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
         nb--;
         delete e;
     }
+}
+
+template<class T, class Compare, typename TRandom, int MaxLevel> 
+void skiplist<T, Compare, TRandom, MaxLevel>::erase(const T& e) {
+    auto it = find(e);
+    erase(it);
 }
 
 #endif // SKIPLIST_H

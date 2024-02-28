@@ -12,13 +12,8 @@ class SLNode {
     const T* val;
     SLNode* next;
     SLNode* prev;
-
     SLNode* up;
     SLNode* down;
-    
-
-    //template<class U, class Compare, typename TRandom, int MaxLevel>
-    //friend class skiplist;
 
 public:
     SLNode(T* val, SLNode* next=nullptr, SLNode* prev=nullptr, SLNode* up=nullptr, SLNode* down=nullptr): 

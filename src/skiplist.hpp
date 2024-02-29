@@ -296,11 +296,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::insert(const T& e) {
 
             // add to level 0
             T* element = new T(e);
-            auto node = new SLNode<T>(element);
-            node->set_next(previous[0]->get_next());
-            node->set_prev(previous[0]);
-            node->set_down(nullptr);
-            node->set_up(nullptr);
+            auto node = new SLNode<T>(element, previous[0]->get_next(), previous[0]);
             if(node->get_next()) node->get_next()->set_prev(node);
             previous[0]->set_next(node);
 
@@ -311,12 +307,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::insert(const T& e) {
             i = 1;
             SLNode<T>* nDown = node;
             while(i < MaxLevel && generator() < (generator.max() + generator.min()) * this->prob) {
-                auto node = new SLNode<T>(element);
-
-                node->set_next(previous[i]->get_next());
-                node->set_prev(previous[i]);
-                node->set_down(nDown);
-                node->set_up(nullptr);
+                auto node = new SLNode<T>(element, previous[i]->get_next(), previous[i], nullptr, nDown);
                 nDown->set_up(node);
                 if(node->get_next()) node->get_next()->set_prev(node);
                 previous[i]->set_next(node);

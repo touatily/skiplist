@@ -25,6 +25,7 @@ class skiplist {
 public:
     skiplist(double p=0.5);
     template <typename Iterator> skiplist(const Iterator& first_element, const Iterator& last_element, double p=0.5);
+    ~skiplist();
     size_t size() const;
     bool exists(const T& e) const;
     void insert(const T& e);
@@ -176,6 +177,23 @@ skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const Iterator& first_element,
         }
     }
     last = previous[0];
+}
+
+template<class T, class Compare, typename TRandom, int MaxLevel>
+skiplist<T, Compare, TRandom, MaxLevel>::~skiplist() {
+    SLNode<T>* p = levels.front();
+    while(p) {
+        std::cout << p->get_val() << std::endl;
+        SLNode<T>* q = p;
+        p = p->get_next();
+        const T* e = q->val;
+        while(q) {
+            auto tmp = q->get_up();
+            delete q;
+            q = tmp;
+        }
+        delete e;
+    }
 }
 
 template<class T, class Compare, typename TRandom, int MaxLevel>

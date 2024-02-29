@@ -32,7 +32,10 @@ public:
     const T& get_val() const { return *val; }
     
     template<class U, class Compare, typename TRandom, int MaxLevel>
-    friend void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare, TRandom, MaxLevel>::iterator it);
+    friend void skiplist<U, Compare, TRandom, MaxLevel>::erase(typename skiplist<U, Compare, TRandom, MaxLevel>::iterator it);
+
+    template<class U, class Compare, typename TRandom, int MaxLevel>
+    friend skiplist<U, Compare, TRandom, MaxLevel>::~skiplist();
 
     friend std::ostream& operator<< (std::ostream& out, const SLNode<T>& n) {
         out << *(n.val);

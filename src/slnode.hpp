@@ -39,7 +39,7 @@ public:
     friend void skiplist<U, Compare, TRandom, MaxLevel>::erase(typename skiplist<U, Compare, TRandom, MaxLevel>::iterator it);
 
     template<class U, class Compare, typename TRandom, int MaxLevel>
-    friend skiplist<U, Compare, TRandom, MaxLevel>::~skiplist();
+    friend void skiplist<U, Compare, TRandom, MaxLevel>::clean();
 
     friend std::ostream& operator<< (std::ostream& out, const SLNode<T>& n) {
         out << *(n.val);

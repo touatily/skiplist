@@ -3,6 +3,7 @@
 
 #include <random>
 #include <ostream>
+#include "skiplist_exceptions.hpp"
 
 template<class U, class Compare, typename TRandom, int MaxLevel>
 class skiplist;
@@ -16,7 +17,7 @@ class SLNode {
     SLNode* down;
 
 public:
-    SLNode(T* val, SLNode* next=nullptr, SLNode* prev=nullptr, SLNode* up=nullptr, SLNode* down=nullptr): 
+    SLNode(const T* val, SLNode* next=nullptr, SLNode* prev=nullptr, SLNode* up=nullptr, SLNode* down=nullptr): 
             val(val), next(next), prev(prev), up(up), down(down) {}
     
     SLNode* get_up() const { return up; }
@@ -29,7 +30,10 @@ public:
     void set_next(SLNode* next) { this-> next=next; }
     void set_prev(SLNode* prev) { this->prev=prev; }
 
-    const T& get_val() const { return *val; }
+    const T& get_val() const { 
+        if(! val) throw SLNodeException("Impossible to get value from empty SLNode");
+        return *val; 
+    }
     
     template<class U, class Compare, typename TRandom, int MaxLevel>
     friend void skiplist<U, Compare, TRandom, MaxLevel>::erase(typename skiplist<U, Compare, TRandom, MaxLevel>::iterator it);

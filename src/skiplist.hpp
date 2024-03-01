@@ -8,6 +8,7 @@
 #include <cassert>
 #include <chrono>
 #include "slnode.hpp"
+#include "skiplist_exceptions.hpp"
 
 enum orientation {
     VERTICAL = 0,
@@ -181,18 +182,20 @@ skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const Iterator& first_element,
 
 template<class T, class Compare, typename TRandom, int MaxLevel>
 skiplist<T, Compare, TRandom, MaxLevel>::~skiplist() {
-    SLNode<T>* p = levels.front();
-    while(p) {
-        std::cout << p->get_val() << std::endl;
-        SLNode<T>* q = p;
-        p = p->get_next();
-        const T* e = q->val;
-        while(q) {
-            auto tmp = q->get_up();
-            delete q;
-            q = tmp;
+    if(! empty()) {
+        SLNode<T>* p = levels.front();
+        while(p) {
+            std::cout << p->get_val() << std::endl;
+            SLNode<T>* q = p;
+            p = p->get_next();
+            const T* e = q->val;
+            while(q) {
+                auto tmp = q->get_up();
+                delete q;
+                q = tmp;
+            }
+            delete e;
         }
-        delete e;
     }
 }
 
@@ -209,16 +212,16 @@ bool skiplist<T, Compare, TRandom, MaxLevel>::empty() const {
 
 template<class T, class Compare, typename TRandom, int MaxLevel>
 bool skiplist<T, Compare, TRandom, MaxLevel>::exists(const T& e) const {
+    if(empty()) return false;
     SLNode<T>* p = levels.back();
-    if(p == nullptr) return false;
-    if(*(p->val) > e) return false;
-    if(*(p->val) == e) return true;
+    if(Compare()(e, p->get_val())) return false;
+    if(p->get_val() == e) return true;
 
     while(p) {
-        while(p->next != nullptr && Compare()(p->get_next()->get_val(), e)) {
+        while(p->get_next() && Compare()(p->get_next()->get_val(), e)) {
             p = p->get_next();
         }
-        if(p->next && p->get_next()->get_val() == e) return true;
+        if(p->get_next() && p->get_next()->get_val() == e) return true;
         p = p->get_down();
     }
     return false;
@@ -327,18 +330,20 @@ unsigned int skiplist<T, Compare, TRandom, MaxLevel>::count(const T& e) const {
 
 template<class T, class Compare, typename TRandom, int MaxLevel> 
 const T& skiplist<T, Compare, TRandom, MaxLevel>::front() const {
+    if(empty()) throw SkiplistException("Calling front method on an empty skiplist");
     return levels.front()->get_val();
 }
 
 template<class T, class Compare, typename TRandom, int MaxLevel> 
 const T& skiplist<T, Compare, TRandom, MaxLevel>::back() const {
+    if(empty()) throw SkiplistException("Calling back method on an empty skiplist");
     return last->get_val();
 }
 
 template<class T, class Compare, typename TRandom, int MaxLevel> 
 typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, TRandom, MaxLevel>::find(const T& e) {
+    if(empty()) return end();
     SLNode<T>* p = levels.back();
-    if(p == nullptr) return end();
     if(Compare()(e, p->get_val())) return end();
     if(p->get_val() == e) return begin();
 
@@ -360,8 +365,8 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, 
 
 template<class T, class Compare, typename TRandom, int MaxLevel> 
 typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::find(const T& e) const {
+    if(empty()) return end();
     SLNode<T>* p = levels.back();
-    if(p == nullptr) return end();
     if(Compare()(e, p->get_val())) return end();
     if(p->get_val() == e) return begin();
 
@@ -383,7 +388,6 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Com
 
 template<class T, class Compare, typename TRandom, int MaxLevel> 
 void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare, TRandom, MaxLevel>::iterator it) {
-
     if(it != end()) {
         SLNode<T>* p = it.current;
         if(p == last) last = last->get_prev();
@@ -396,15 +400,13 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
                     levels[i] = nullptr;
                 }
             } else {
-                auto q = p->get_next();
+                SLNode<T>* q = p->get_next();
                 delete levels[0];
                 levels[0] = q;
                 q->set_prev(nullptr);
                 for(int i=1; i < MaxLevel; i++) {
                     if(! q->get_up()) {
-                        q->set_up(new SLNode<T>(*q));
-                        q->get_up()->set_down(q); 
-                        q->get_up()->set_next(levels[i]->get_next());
+                        q->set_up(new SLNode<T>(q->val, levels[i]->get_next(), nullptr, nullptr, q));
                     } 
                     q = q->get_up();
                     q->set_prev(nullptr);

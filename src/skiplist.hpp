@@ -44,6 +44,9 @@ public:
     const T& front() const;
     const T& back() const;
 
+    class iterator;
+    class const_iterator;
+
     class iterator 
     {
     public:
@@ -62,6 +65,8 @@ public:
         friend void skiplist<T, Compare, TRandom, MaxLevel>::erase(iterator it);
     private:
         SLNode<T>* current;
+
+        friend const_iterator::const_iterator(const iterator& it);
     };
 
     iterator begin() { return iterator(levels.front()); }
@@ -73,6 +78,7 @@ public:
     {
     public:
         const_iterator(SLNode<T>* c=nullptr): current(c) {}
+        const_iterator(const iterator& it): current(it.current) {}
         const T& operator*() const { return current->get_val(); }
         //pointer operator->() { return m_ptr; }
 
@@ -95,6 +101,9 @@ public:
     void erase(iterator it);
     iterator find(const T& e);
     const_iterator find(const T& e) const;
+
+    iterator lower_bound(const T& e);
+    const_iterator lower_bound(const T& e) const;
 };
 
 
@@ -363,10 +372,10 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, 
 
 template<class T, class Compare, typename TRandom, int MaxLevel> 
 typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::find(const T& e) const {
-    if(empty()) return end();
+    if(empty()) return cend();
     SLNode<T>* p = levels.back();
-    if(Compare()(e, p->get_val())) return end();
-    if(p->get_val() == e) return begin();
+    if(Compare()(e, p->get_val())) return cend();
+    if(p->get_val() == e) return cbegin();
 
     while(p) {
         while(p->get_next() && Compare()(p->get_next()->get_val(), e)) {
@@ -381,7 +390,7 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Com
         }
         p = p->get_down();
     }
-    return end();
+    return cend();
 }
 
 template<class T, class Compare, typename TRandom, int MaxLevel> 
@@ -430,6 +439,54 @@ template<class T, class Compare, typename TRandom, int MaxLevel>
 void skiplist<T, Compare, TRandom, MaxLevel>::erase(const T& e) {
     auto it = find(e);
     erase(it);
+}
+
+template<class T, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, TRandom, MaxLevel>::lower_bound(const T& e) {
+    if(empty()) return end();
+    SLNode<T>* p = levels.back(), *q = nullptr;
+    if(Compare()(e, p->get_val())) return begin();
+    if(p->get_val() == e) return begin();
+
+    while(p) {
+        while(p->get_next() && Compare()(p->get_next()->get_val(), e)) {
+            p = p->get_next();
+        }
+        if(p->get_next() && p->get_next()->get_val() == e) {
+            p = p->get_next();
+            while(p->get_down()) {
+                p = p->get_down();
+            }
+            return iterator(p);
+        }
+        q = p;
+        p = p->get_down();
+    }
+    return iterator(q->get_next());
+}
+
+template<class T, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::lower_bound(const T& e) const {
+    if(empty()) return cend();
+    SLNode<T>* p = levels.back(), *q = nullptr;
+    if(Compare()(e, p->get_val())) return cbegin();
+    if(p->get_val() == e) return cbegin();
+
+    while(p) {
+        while(p->get_next() && Compare()(p->get_next()->get_val(), e)) {
+            p = p->get_next();
+        }
+        if(p->get_next() && p->get_next()->get_val() == e) {
+            p = p->get_next();
+            while(p->get_down()) {
+                p = p->get_down();
+            }
+            return const_iterator(p);
+        }
+        q = p;
+        p = p->get_down();
+    }
+    return const_iterator(q->get_next());
 }
 
 #endif // SKIPLIST_H

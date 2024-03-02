@@ -104,6 +104,8 @@ public:
 
     iterator lower_bound(const T& e);
     const_iterator lower_bound(const T& e) const;
+    iterator upper_bound(const T& e);
+    const_iterator upper_bound(const T& e) const;
 };
 
 
@@ -487,6 +489,24 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Com
         p = p->get_down();
     }
     return const_iterator(q->get_next());
+}
+
+template<class T, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, TRandom, MaxLevel>::upper_bound(const T& e) {
+    skiplist<T, Compare, TRandom, MaxLevel>::iterator it = lower_bound(e);
+    if(it != end() && *it == e) {
+        ++it;
+    }
+    return it;
+}
+
+template<class T, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::upper_bound(const T& e) const {
+    skiplist<T, Compare, TRandom, MaxLevel>::const_iterator it = lower_bound(e);
+    if(it != cend() && *it == e) {
+        ++it;
+    }
+    return it;
 }
 
 #endif // SKIPLIST_H

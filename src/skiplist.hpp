@@ -87,10 +87,10 @@ public:
         SLNode<T>* current;
     };
 
-    const_iterator begin() const { return const_iterator(levels[0]); }
-    const_iterator end() const { return const_iterator(nullptr); }
-    const_iterator rbegin() const { return const_iterator(nullptr); }
-    const_iterator rend() const { return const_iterator(last); }
+    const_iterator cbegin() const { return const_iterator(levels[0]); }
+    const_iterator cend() const { return const_iterator(nullptr); }
+    const_iterator crbegin() const { return const_iterator(nullptr); }
+    const_iterator crend() const { return const_iterator(last); }
 
     void erase(iterator it);
     iterator find(const T& e);
@@ -101,7 +101,7 @@ public:
 template<class T, class Compare, typename TRandom, int MaxLevel>
 void skiplist<T, Compare, TRandom, MaxLevel>::print() const {
     std::cout << "skiplist: ";
-    for(auto it=begin(); it != end(); ++it) {
+    for(auto it=cbegin(); it != cend(); ++it) {
         std::cout << *it << " ";
     }
     std::cout << std::endl;
@@ -156,14 +156,14 @@ skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const Iterator& first_element,
 }
 
 template<class T, class Compare, typename TRandom, int MaxLevel>
-skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const skiplist& sk): skiplist(sk.begin(), sk.end(), sk.prob) {}
+skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const skiplist<T, Compare, TRandom, MaxLevel>& sk): skiplist(sk.cbegin(), sk.cend(), sk.prob) {}
 
 template<class T, class Compare, typename TRandom, int MaxLevel>
 skiplist<T, Compare, TRandom, MaxLevel>& skiplist<T, Compare, TRandom, MaxLevel>::operator=(const skiplist<T, Compare, TRandom, MaxLevel>& sk) {
     if(this != &sk) {
         clear();
         prob = sk.prob;
-        for(auto it=sk.begin(); it != sk.end(); ++it) {
+        for(auto it=sk.cbegin(); it != sk.cend(); ++it) {
             insert(*it);
         }
     }

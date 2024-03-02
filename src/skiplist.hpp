@@ -23,26 +23,6 @@ class skiplist {
     size_t nb;
     TRandom generator;
 
-    void clean() {
-        SLNode<T>* p = levels.front();
-        while(p) {
-            SLNode<T>* q = p;
-            p = p->get_next();
-            const T* e = q->val;
-            while(q) {
-                SLNode<T>* tmp = q->get_up();
-                delete q;
-                q = tmp;
-            }
-            delete e;
-        }
-        for(int i=0; i < levels.size(); i++) {
-            levels[i] = nullptr;
-        }
-        last = nullptr;
-        nb = 0;
-    }
-
 public:
     skiplist(double p=0.5);
     template <typename Iterator> skiplist(const Iterator& first_element, const Iterator& last_element, double p=0.5);
@@ -52,6 +32,7 @@ public:
 
     ~skiplist();
     size_t size() const;
+    void clear();
     double get_prob() { return prob; }
     bool exists(const T& e) const;
     void insert(const T& e);
@@ -180,7 +161,7 @@ skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const skiplist& sk): skiplist(
 template<class T, class Compare, typename TRandom, int MaxLevel>
 skiplist<T, Compare, TRandom, MaxLevel>& skiplist<T, Compare, TRandom, MaxLevel>::operator=(const skiplist<T, Compare, TRandom, MaxLevel>& sk) {
     if(this != &sk) {
-        clean();
+        clear();
         prob = sk.prob;
         for(auto it=sk.begin(); it != sk.end(); ++it) {
             insert(*it);
@@ -189,9 +170,31 @@ skiplist<T, Compare, TRandom, MaxLevel>& skiplist<T, Compare, TRandom, MaxLevel>
     return *this;
 }
 
+
+template<class T, class Compare, typename TRandom, int MaxLevel>
+void skiplist<T, Compare, TRandom, MaxLevel>::clear() {
+    SLNode<T>* p = levels.front();
+    while(p) {
+        SLNode<T>* q = p;
+        p = p->get_next();
+        const T* e = q->val;
+        while(q) {
+            SLNode<T>* tmp = q->get_up();
+            delete q;
+            q = tmp;
+        }
+        delete e;
+    }
+    for(int i=0; i < levels.size(); i++) {
+        levels[i] = nullptr;
+    }
+    last = nullptr;
+    nb = 0;
+}
+
 template<class T, class Compare, typename TRandom, int MaxLevel>
 skiplist<T, Compare, TRandom, MaxLevel>::~skiplist() {
-    clean();
+    clear();
 }
 
 template<class T, class Compare, typename TRandom, int MaxLevel>

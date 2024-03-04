@@ -7,6 +7,7 @@
 #include <random>
 #include <cassert>
 #include <chrono>
+#include <utility>
 #include "slnode.hpp"
 #include "skiplist_exceptions.hpp"
 
@@ -15,44 +16,70 @@ enum orientation {
     HORIZONTAL
 };
 
-template<class T, class Compare = std::less<T>, typename TRandom = std::default_random_engine, int MaxLevel=10>
+
+
+template<class K, class V, class Compare=std::less<K>, typename TRandom=std::default_random_engine, int MaxLevel=10>
 class skiplist {
-    std::vector<SLNode<T>*> levels;
-    SLNode<T>* last;
+    std::vector<SLNode<K, V>*> levels;
+    SLNode<K, V>* last;
     double prob;
     size_t nb;
     TRandom generator;
 
 public:
+    typedef std::pair<const K, V> value_type;
+    class iterator;
+    class const_iterator;
+
     skiplist(double p=0.5);
-    template <typename Iterator> skiplist(const Iterator& first_element, const Iterator& last_element, double p=0.5);
-    
-    skiplist(const skiplist<T, Compare, TRandom, MaxLevel>& sk);
-    skiplist<T, Compare, TRandom, MaxLevel>& operator=(const skiplist<T, Compare, TRandom, MaxLevel>& sk);
+    template <class Iterator> skiplist(const Iterator& first_element, const Iterator& last_element, double p=0.5);
+    skiplist(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk);
+    skiplist<K, V, Compare, TRandom, MaxLevel>& operator=(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk);
 
     ~skiplist();
     size_t size() const;
     void clear();
     double get_prob() { return prob; }
-    bool exists(const T& e) const;
-    void insert(const T& e);
+    bool exists(const K& e) const;
+
+    std::pair<iterator, bool> insert(const value_type& p);
+    std::pair<iterator, bool> insert(iterator& it, const value_type& p);
+    template <class InputIterator> void insert (InputIterator first, InputIterator last);
+
     void sketch(orientation orient=VERTICAL) const;
-    void erase(const T& e);
+    void erase(const K& e);
     void print() const;
     bool empty() const;
-    unsigned int count(const T& e) const;
-    const T& front() const;
-    const T& back() const;
+    unsigned int count(const K& e) const;
+    const K& front() const;
+    const K& back() const;
 
-    class iterator;
-    class const_iterator;
+    iterator begin() { return iterator(levels.front()); }
+    iterator end() { return iterator(nullptr); }
+    iterator rbegin() { return iterator(nullptr); }
+    iterator rend() { return iterator(last); }
+
+    const_iterator cbegin() const { return const_iterator(levels.front()); }
+    const_iterator cend() const { return const_iterator(nullptr); }
+    const_iterator crbegin() const { return const_iterator(nullptr); }
+    const_iterator crend() const { return const_iterator(last); }
+
+    void erase(iterator it);
+    iterator find(const K& e);
+    const_iterator find(const K& e) const;
+
+    iterator lower_bound(const K& e);
+    const_iterator lower_bound(const K& e) const;
+    iterator upper_bound(const K& e);
+    const_iterator upper_bound(const K& e) const;
+    
 
     class iterator 
     {
     public:
-        iterator(SLNode<T>* c=nullptr): current(c) {}
+        iterator(SLNode<K, V>* c=nullptr): current(c) {}
 
-        const T& operator*() const { return current->get_val(); }
+        value_type operator*() const { return {current->get_key(), current->get_value()}; }
         //pointer operator->() { return m_ptr; }
 
         iterator& operator++() { current = current->get_next(); return *this; }  
@@ -60,66 +87,76 @@ public:
         iterator& operator--() { current = current->get_prev(); return *this; }  
         iterator operator--(int) { iterator tmp = *this; current = current->get_prev(); return tmp; }
 
+        iterator& operator+(int n) {
+            while(current && n > 0) {
+                current = current->get_next();
+                n--;
+            }
+            return *this;
+        }
+        iterator& operator-(int n) {
+            while(current && n > 0) {
+                current = current->get_prev();
+                n--;
+            }
+            return *this;
+        } 
+
         friend bool operator== (const iterator& a, const iterator& b)  { return a.current == b.current; }
         friend bool operator!= (const iterator& a, const iterator& b)  { return a.current != b.current; }
-        friend void skiplist<T, Compare, TRandom, MaxLevel>::erase(iterator it);
+        friend void skiplist<K, V, Compare, TRandom, MaxLevel>::erase(iterator it);
     private:
-        SLNode<T>* current;
+        SLNode<K, V>* current;
 
         friend const_iterator::const_iterator(const iterator& it);
     };
 
-    iterator begin() { return iterator(levels.front()); }
-    iterator end() { return iterator(nullptr); }
-    iterator rbegin() { return iterator(nullptr); }
-    iterator rend() { return iterator(last); }
-
     class const_iterator 
     {
     public:
-        const_iterator(SLNode<T>* c=nullptr): current(c) {}
+        const_iterator(SLNode<K, V>* c=nullptr): current(c) {}
         const_iterator(const iterator& it): current(it.current) {}
-        const T& operator*() const { return current->get_val(); }
+        const value_type operator*() const { return {current->get_key(), current->get_value()}; }
         //pointer operator->() { return m_ptr; }
 
         const_iterator& operator++() { current = current->get_next(); return *this; }  
         const_iterator operator++(int) { const_iterator tmp = *this; current = current->get_next(); return tmp; }
         const_iterator& operator--() { current = current->get_prev(); return *this; }  
         const_iterator operator--(int) { const_iterator tmp = *this; current = current->get_prev(); return tmp; }
+        const_iterator& operator+(int n) {
+            while(current && n > 0) {
+                current = current->get_next();
+                n--;
+            }
+            return *this;
+        }
+        const_iterator& operator-(int n) {
+            while(current && n > 0) {
+                current = current->get_prev();
+                n--;
+            }
+            return *this;
+        }
 
         friend bool operator== (const const_iterator& a, const const_iterator& b)  { return a.current == b.current; };
         friend bool operator!= (const const_iterator& a, const const_iterator& b)  { return a.current != b.current; };  
     private:
-        SLNode<T>* current;
+        SLNode<K, V>* current;
     };
-
-    const_iterator cbegin() const { return const_iterator(levels[0]); }
-    const_iterator cend() const { return const_iterator(nullptr); }
-    const_iterator crbegin() const { return const_iterator(nullptr); }
-    const_iterator crend() const { return const_iterator(last); }
-
-    void erase(iterator it);
-    iterator find(const T& e);
-    const_iterator find(const T& e) const;
-
-    iterator lower_bound(const T& e);
-    const_iterator lower_bound(const T& e) const;
-    iterator upper_bound(const T& e);
-    const_iterator upper_bound(const T& e) const;
 };
 
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-void skiplist<T, Compare, TRandom, MaxLevel>::print() const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+void skiplist<K, V, Compare, TRandom, MaxLevel>::print() const {
     std::cout << "skiplist: ";
     for(auto it=cbegin(); it != cend(); ++it) {
-        std::cout << *it << " ";
+        std::cout << (*it).first << " ";
     }
     std::cout << std::endl;
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-void skiplist<T, Compare, TRandom, MaxLevel>::sketch(orientation orient) const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+void skiplist<K, V, Compare, TRandom, MaxLevel>::sketch(orientation orient) const {
     if(empty()) {
         std::cout << "{{ skiplit empty }}" << std::endl;
         return;
@@ -129,7 +166,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::sketch(orientation orient) const {
         for(int i=0; i < MaxLevel; i++) {
             auto p = levels[i];
             while(p) {
-                std::cout << p->get_val() << " ";
+                std::cout << p->get_key() << " ";
                 p = p->get_next();
             }
             std::cout << std::endl;
@@ -140,7 +177,7 @@ void skiplist<T, Compare, TRandom, MaxLevel>::sketch(orientation orient) const {
         while(p) {
             auto q = p;
             while(q) {
-                std::cout << q->get_val() << " ";
+                std::cout << q->get_key() << " ";
                 q = q->get_up();
             }
             std::cout << std::endl;
@@ -152,49 +189,49 @@ void skiplist<T, Compare, TRandom, MaxLevel>::sketch(orientation orient) const {
 }
 
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-skiplist<T, Compare, TRandom, MaxLevel>::skiplist(double p): levels(MaxLevel, nullptr), prob(p), nb(0),
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+skiplist<K, V, Compare, TRandom, MaxLevel>::skiplist(double p): levels(MaxLevel, nullptr), prob(p), nb(0),
         generator(std::chrono::system_clock::now().time_since_epoch().count()), last(nullptr) {}
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
 template <typename Iterator>
-skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const Iterator& first_element, const Iterator& last_element, double p): levels(MaxLevel, nullptr), prob(p),
+skiplist<K, V, Compare, TRandom, MaxLevel>::skiplist(const Iterator& first_element, const Iterator& last_element, double p): levels(MaxLevel, nullptr), prob(p),
         generator(std::chrono::system_clock::now().time_since_epoch().count()), nb(0) {
     
-    for(auto it=first_element; it != last_element; ++it) {
-        insert(*it);
-    }
+    insert(first_element, last_element);
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-skiplist<T, Compare, TRandom, MaxLevel>::skiplist(const skiplist<T, Compare, TRandom, MaxLevel>& sk): skiplist(sk.cbegin(), sk.cend(), sk.prob) {}
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+skiplist<K, V, Compare, TRandom, MaxLevel>::skiplist(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk): skiplist(sk.cbegin(), sk.cend(), sk.prob) {}
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-skiplist<T, Compare, TRandom, MaxLevel>& skiplist<T, Compare, TRandom, MaxLevel>::operator=(const skiplist<T, Compare, TRandom, MaxLevel>& sk) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+skiplist<K, V, Compare, TRandom, MaxLevel>& skiplist<K, V, Compare, TRandom, MaxLevel>::operator=(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk) {
     if(this != &sk) {
         clear();
         prob = sk.prob;
         for(auto it=sk.cbegin(); it != sk.cend(); ++it) {
-            insert(*it);
+            insert({(*it).first, (*it).second});
         }
     }
     return *this;
 }
 
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-void skiplist<T, Compare, TRandom, MaxLevel>::clear() {
-    SLNode<T>* p = levels.front();
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+void skiplist<K, V, Compare, TRandom, MaxLevel>::clear() {
+    SLNode<K, V>* p = levels.front();
     while(p) {
-        SLNode<T>* q = p;
+        SLNode<K, V>* q = p;
         p = p->get_next();
-        const T* e = q->val;
+        const K* k = q->get_pkey();
+        V* v = q->get_pvalue();
         while(q) {
-            SLNode<T>* tmp = q->get_up();
+            SLNode<K, V>* tmp = q->get_up();
             delete q;
             q = tmp;
         }
-        delete e;
+        delete k;
+        delete v;
     }
     for(int i=0; i < levels.size(); i++) {
         levels[i] = nullptr;
@@ -203,26 +240,26 @@ void skiplist<T, Compare, TRandom, MaxLevel>::clear() {
     nb = 0;
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-skiplist<T, Compare, TRandom, MaxLevel>::~skiplist() {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+skiplist<K, V, Compare, TRandom, MaxLevel>::~skiplist() {
     clear();
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-size_t skiplist<T, Compare, TRandom, MaxLevel>::size() const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+size_t skiplist<K, V, Compare, TRandom, MaxLevel>::size() const {
     return nb;
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-bool skiplist<T, Compare, TRandom, MaxLevel>::empty() const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+bool skiplist<K, V, Compare, TRandom, MaxLevel>::empty() const {
     return nb == 0;
     // return levels.front() == nullptr;
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-bool skiplist<T, Compare, TRandom, MaxLevel>::exists(const T& e) const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+bool skiplist<K, V, Compare, TRandom, MaxLevel>::exists(const K& e) const {
     if(empty()) return false;
-    SLNode<T>* p = levels.back();
+    SLNode<K, V>* p = levels.back();
     if(Compare()(e, p->get_val())) return false;
     if(p->get_val() == e) return true;
 
@@ -236,131 +273,144 @@ bool skiplist<T, Compare, TRandom, MaxLevel>::exists(const T& e) const {
     return false;
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-void skiplist<T, Compare, TRandom, MaxLevel>::insert(const T& e) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+std::pair<typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator, bool> skiplist<K, V, Compare, TRandom, MaxLevel>::insert(const value_type& p) {
     if(empty()) {
-        T* p = new T(e);
+        const K* k = new K(p.first);
+        V* v = new V(p.second);
 
-        for(int i=0; i < levels.size(); i++) {
-            levels[i] = new SLNode(p);
-        }
+        levels[0] = new SLNode<K, V>(k, v);
         for(int i=1; i < levels.size(); i++) {
+            levels[i] = new SLNode<K, V>(k, v);
             levels[i]->set_down(levels[i-1]);
             levels[i-1]->set_up(levels[i]);
         }
         nb++;
-        last = levels[0];
-    } else if(e == levels.front()->get_val()) {
-        return;
-    } else {
-        if(Compare()(e, levels.front()->get_val())) {
-            T* element = new T(e);
-            for(int i=0; i < levels.size(); i++) {
-                levels[i] = new SLNode(element, levels[i]);
-                levels[i]->get_next()->set_prev(levels[i]);
-            }
-            for(int i=1; i < levels.size(); i++) {
-                levels[i]->set_down(levels[i-1]);
-                levels[i-1]->set_up(levels[i]);
-            }
+        last = levels.front();
+        return {begin(), true};
+    } else if(p.first == levels.front()->get_key()) {
+        return {begin(), false};
+    } else if(Compare()(p.first, levels.front()->get_key())) {
+        const K* k = new K(p.first);
+        V* v = new V(p.second);
 
-            SLNode<T>* p = levels.front()->get_next();
-            int i = 1;
-            while(i < MaxLevel && generator() < (generator.max() + generator.min()) * this->prob) {
-                i++;
-                p = p->get_up();
-            }
-
-            SLNode<T>* tmp = p->get_up();
-            p->set_up(nullptr);
-            p = tmp;
-            while(p) {
-                tmp = p->get_up();
-                p->get_prev()->set_next(p->get_next());
-                if(p->get_next()) p->get_next()->set_prev(p->get_prev());
-                delete p;
-                p = tmp;
-            }
-            nb++;
-        } else {
-            SLNode<T>* p = levels.back();
-            bool found = false;
-
-            std::vector<SLNode<T>*> previous = levels;
-            int i = MaxLevel - 1;
-            while(!found && i>0) {
-                while(previous[i]->get_next() && Compare()(previous[i]->get_next()->get_val(), e)) {
-                    previous[i] = previous[i]->get_next();
-                }
-                if(previous[i]->get_next() && previous[i]->get_next()->get_val() == e) {
-                    found = true;
-                }
-                previous[i-1] = previous[i]->get_down();
-                i--;
-            }
-            
-            if(found) return;
-            assert(previous[0] != nullptr);
-            while(previous[0]->get_next() && Compare()(previous[0]->get_next()->get_val(), e)) {
-                previous[0] = previous[0]->get_next();
-            }
-            if(previous[0]->get_next() && previous[0]->get_next()->get_val() == e) return;
-
-            // add to level 0
-            T* element = new T(e);
-            auto node = new SLNode<T>(element, previous[0]->get_next(), previous[0]);
-            if(node->get_next()) node->get_next()->set_prev(node);
-            previous[0]->set_next(node);
-
-            if(node->get_next() == nullptr) {
-                last = node;
-            }
-
-            i = 1;
-            SLNode<T>* nDown = node;
-            while(i < MaxLevel && generator() < (generator.max() + generator.min()) * this->prob) {
-                auto node = new SLNode<T>(element, previous[i]->get_next(), previous[i], nullptr, nDown);
-                nDown->set_up(node);
-                if(node->get_next()) node->get_next()->set_prev(node);
-                previous[i]->set_next(node);
-
-                nDown = node;
-                i++;
-            }
-            nb++;
+        levels[0] = new SLNode<K, V>(k, v, levels[0]);
+        levels[0]->get_next()->set_prev(levels[0]);
+        for(int i=1; i < levels.size(); i++) {
+            levels[i] = new SLNode<K, V>(k, v, levels[i]);
+            levels[i]->get_next()->set_prev(levels[i]);
+            levels[i]->set_down(levels[i-1]);
+            levels[i-1]->set_up(levels[i]);
         }
+
+        SLNode<K, V>* next = levels.front()->get_next(), *tmp = nullptr;
+        while(next->get_up() && generator() < (generator.max() + generator.min()) * this->prob) {
+            next = next->get_up();
+        }
+
+        tmp = next->get_up();
+        next->set_up(nullptr);
+        next = tmp;
+        while(next) {
+            tmp = next->get_up();
+            next->get_prev()->set_next(next->get_next());
+            if(next->get_next()) next->get_next()->set_prev(next->get_prev());
+            delete next;
+            next = tmp;
+        }
+        nb++;
+        return {begin(), true};
+    } else {
+        std::vector<SLNode<K, V>*> previous = levels;
+        int i = MaxLevel - 1;
+        while(i>0) {
+            while(previous[i]->get_next() && Compare()(previous[i]->get_next()->get_key(), p.first)) {
+                previous[i] = previous[i]->get_next();
+            }
+            if(previous[i]->get_next() && previous[i]->get_next()->get_key() == p.first) {
+                return {previous[i]->get_next(), false};
+            }
+            previous[i-1] = previous[i]->get_down();
+            i--;
+        }
+        
+        while(previous[0]->get_next() && Compare()(previous[0]->get_next()->get_key(), p.first)) {
+            previous[0] = previous[0]->get_next();
+        }
+        if(previous[0]->get_next() && previous[0]->get_next()->get_key() == p.first) return {previous[0]->get_next(), false};
+
+        // add to level 0
+        const K* k = new K(p.first);
+        V* v = new V(p.second);
+        auto node = new SLNode<K, V>(k, v, previous[0]->get_next(), previous[0]);
+        if(node->get_next()) node->get_next()->set_prev(node);
+        previous[0]->set_next(node);
+
+        if(node->get_next() == nullptr) {
+            last = node;
+        }
+
+        i = 1;
+        SLNode<K, V>* nDown = node;
+        while(i < MaxLevel && generator() < (generator.max() + generator.min()) * this->prob) {
+            auto node = new SLNode<K, V>(k, v, previous[i]->get_next(), previous[i], nullptr, nDown);
+            nDown->set_up(node);
+            if(node->get_next()) node->get_next()->set_prev(node);
+            previous[i]->set_next(node);
+
+            nDown = node;
+            i++;
+        }
+        nb++;
+
+        return {iterator(node), true};
     }
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel> 
-unsigned int skiplist<T, Compare, TRandom, MaxLevel>::count(const T& e) const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+std::pair<typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator, bool> skiplist<K, V, Compare, TRandom, MaxLevel>::insert(typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator& it, const value_type& p) {
+    // temporary version
+    return insert(p);
+}
+
+
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+template <class InputIterator> 
+void skiplist<K, V, Compare, TRandom, MaxLevel>::insert (InputIterator first_element, InputIterator last_element) {
+    for(auto it=first_element; it != last_element; ++it) {
+        insert(*it);        
+    }
+}
+
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+unsigned int skiplist<K, V, Compare, TRandom, MaxLevel>::count(const K& e) const {
     return (exists(e))? 1 : 0;
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel> 
-const T& skiplist<T, Compare, TRandom, MaxLevel>::front() const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+const K& skiplist<K, V, Compare, TRandom, MaxLevel>::front() const {
     if(empty()) throw SkiplistException("Calling front method on an empty skiplist");
-    return levels.front()->get_val();
+    return levels.front()->get_key();
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel> 
-const T& skiplist<T, Compare, TRandom, MaxLevel>::back() const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+const K& skiplist<K, V, Compare, TRandom, MaxLevel>::back() const {
     if(empty()) throw SkiplistException("Calling back method on an empty skiplist");
-    return last->get_val();
+    return last->get_key();
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel> 
-typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, TRandom, MaxLevel>::find(const T& e) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel> 
+typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator skiplist<K, V, Compare, TRandom, MaxLevel>::find(const K& e) {
     if(empty()) return end();
-    SLNode<T>* p = levels.back();
-    if(Compare()(e, p->get_val())) return end();
-    if(p->get_val() == e) return begin();
+    SLNode<K, V>* p = levels.back();
+    if(Compare()(e, p->get_key())) return end();
+    if(p->get_key() == e) return begin();
 
     while(p) {
-        while(p->get_next() && Compare()(p->get_next()->get_val(), e)) {
+        while(p->get_next() && Compare()(p->get_next()->get_key(), e)) {
             p = p->get_next();
         }
-        if(p->get_next() && p->get_next()->get_val() == e) {
+        if(p->get_next() && p->get_next()->get_key() == e) {
             p = p->get_next();
             while(p->get_down()) {
                 p = p->get_down();
@@ -372,18 +422,18 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, 
     return end();
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel> 
-typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::find(const T& e) const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<K, V, Compare, TRandom, MaxLevel>::const_iterator skiplist<K, V, Compare, TRandom, MaxLevel>::find(const K& e) const {
     if(empty()) return cend();
-    SLNode<T>* p = levels.back();
-    if(Compare()(e, p->get_val())) return cend();
-    if(p->get_val() == e) return cbegin();
+    SLNode<K, V>* p = levels.back();
+    if(Compare()(e, p->get_key())) return cend();
+    if(p->get_key() == e) return cbegin();
 
     while(p) {
-        while(p->get_next() && Compare()(p->get_next()->get_val(), e)) {
+        while(p->get_next() && Compare()(p->get_next()->get_key(), e)) {
             p = p->get_next();
         }
-        if(p->get_next() && p->get_next()->get_val() == e) {
+        if(p->get_next() && p->get_next()->get_key() == e) {
             p = p->get_next();
             while(p->get_down()) {
                 p = p->get_down();
@@ -395,12 +445,13 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Com
     return cend();
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel> 
-void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare, TRandom, MaxLevel>::iterator it) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+void skiplist<K, V, Compare, TRandom, MaxLevel>::erase(typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator it) {
     if(it != end()) {
-        SLNode<T>* p = it.current;
+        SLNode<K, V>* p = it.current;
         if(p == last) last = last->get_prev();
-        const T*  e = it.current->val;
+        const K* k = it.current->key;
+        const V* v = it.current->value;
 
         if(it == begin()) {
             if(p->get_next() == nullptr) {
@@ -409,13 +460,13 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
                     levels[i] = nullptr;
                 }
             } else {
-                SLNode<T>* q = p->get_next();
+                SLNode<K, V>* q = p->get_next();
                 delete levels[0];
                 levels[0] = q;
                 q->set_prev(nullptr);
                 for(int i=1; i < MaxLevel; i++) {
                     if(! q->get_up()) {
-                        q->set_up(new SLNode<T>(q->val, levels[i]->get_next(), nullptr, nullptr, q));
+                        q->set_up(new SLNode<K, V>(q->key, q->value, levels[i]->get_next(), nullptr, nullptr, q));
                     } 
                     q = q->get_up();
                     q->set_prev(nullptr);
@@ -433,20 +484,21 @@ void skiplist<T, Compare, TRandom, MaxLevel>::erase(typename skiplist<T, Compare
             }
         }
         nb--;
-        delete e;
+        delete k;
+        delete v;
     }
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel> 
-void skiplist<T, Compare, TRandom, MaxLevel>::erase(const T& e) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+void skiplist<K, V, Compare, TRandom, MaxLevel>::erase(const K& e) {
     auto it = find(e);
     erase(it);
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, TRandom, MaxLevel>::lower_bound(const T& e) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator skiplist<K, V, Compare, TRandom, MaxLevel>::lower_bound(const K& e) {
     if(empty()) return end();
-    SLNode<T>* p = levels.back(), *q = nullptr;
+    SLNode<K, V>* p = levels.back(), *q = nullptr;
     if(Compare()(e, p->get_val())) return begin();
     if(p->get_val() == e) return begin();
 
@@ -467,18 +519,18 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, 
     return iterator(q->get_next());
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::lower_bound(const T& e) const {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<K, V, Compare, TRandom, MaxLevel>::const_iterator skiplist<K, V, Compare, TRandom, MaxLevel>::lower_bound(const K& e) const {
     if(empty()) return cend();
-    SLNode<T>* p = levels.back(), *q = nullptr;
-    if(Compare()(e, p->get_val())) return cbegin();
-    if(p->get_val() == e) return cbegin();
+    SLNode<K, V>* p = levels.back(), *q = nullptr;
+    if(Compare()(e, p->get_key())) return cbegin();
+    if(p->get_key() == e) return cbegin();
 
     while(p) {
-        while(p->get_next() && Compare()(p->get_next()->get_val(), e)) {
+        while(p->get_next() && Compare()(p->get_next()->get_key(), e)) {
             p = p->get_next();
         }
-        if(p->get_next() && p->get_next()->get_val() == e) {
+        if(p->get_next() && p->get_next()->get_key() == e) {
             p = p->get_next();
             while(p->get_down()) {
                 p = p->get_down();
@@ -491,19 +543,19 @@ typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Com
     return const_iterator(q->get_next());
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-typename skiplist<T, Compare, TRandom, MaxLevel>::iterator skiplist<T, Compare, TRandom, MaxLevel>::upper_bound(const T& e) {
-    skiplist<T, Compare, TRandom, MaxLevel>::iterator it = lower_bound(e);
-    if(it != end() && *it == e) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator skiplist<K, V, Compare, TRandom, MaxLevel>::upper_bound(const K& e) {
+    skiplist<K, V, Compare, TRandom, MaxLevel>::iterator it = lower_bound(e);
+    if(it != end() && (*it).first == e) {
         ++it;
     }
     return it;
 }
 
-template<class T, class Compare, typename TRandom, int MaxLevel>
-typename skiplist<T, Compare, TRandom, MaxLevel>::const_iterator skiplist<T, Compare, TRandom, MaxLevel>::upper_bound(const T& e) const {
-    skiplist<T, Compare, TRandom, MaxLevel>::const_iterator it = lower_bound(e);
-    if(it != cend() && *it == e) {
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+typename skiplist<K, V, Compare, TRandom, MaxLevel>::const_iterator skiplist<K, V, Compare, TRandom, MaxLevel>::upper_bound(const K& e) const {
+    skiplist<K, V, Compare, TRandom, MaxLevel>::const_iterator it = lower_bound(e);
+    if(it != cend() && (*it).first == e) {
         ++it;
     }
     return it;

@@ -39,7 +39,7 @@ public:
     ~skiplist();
     size_t size() const;
     void clear();
-    double get_prob() { return prob; }
+    double get_prob() const { return prob; }
     bool exists(const K& e) const;
 
     std::pair<iterator, bool> insert(K k, V v) {
@@ -48,7 +48,7 @@ public:
     }
     std::pair<iterator, bool> insert(const value_type& p);
     std::pair<iterator, bool> insert(iterator& it, const value_type& p);
-    template <class InputIterator> void insert (InputIterator first, InputIterator last);
+    template <class InputIterator> void insert(InputIterator first, InputIterator last);
 
     void sketch(orientation orient=VERTICAL) const;
     
@@ -82,6 +82,8 @@ public:
     const_iterator lower_bound(const K& e) const;
     iterator upper_bound(const K& e);
     const_iterator upper_bound(const K& e) const;
+
+    void swap(skiplist& sk);
     
 
     class iterator : public std::iterator< std::bidirectional_iterator_tag, value_type>
@@ -608,6 +610,15 @@ V& skiplist<K, V, Compare, TRandom, MaxLevel>::at(const K& k) {
     } else {
         return *(it->second);
     }
+}
+
+template<class K, class V, class Compare, typename TRandom, int MaxLevel>
+void skiplist<K, V, Compare, TRandom, MaxLevel>::swap(skiplist<K, V, Compare, TRandom, MaxLevel>& sk) {
+    std::swap(this->last, sk.last);
+    std::swap(this->prob, sk.prob);
+    std::swap(this->generator, sk.generator);
+    std::swap(this->nb, sk.nb);
+    this->levels.swap(sk.levels);
 }
 
 #endif // SKIPLIST_H

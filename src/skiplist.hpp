@@ -511,9 +511,12 @@ size_t skiplist<K, V, Compare, TRandom, MaxLevel>::erase(const K& e) {
 
 template<class K, class V, class Compare, typename TRandom, int MaxLevel>
 void skiplist<K, V, Compare, TRandom, MaxLevel>::erase(typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator first_element, typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator last_element){
-    //for(auto it = first_element; it != last_element; ++it) {
-    //    erase(it);
-    //}
+    auto it = first_element;
+    while(it != last_element) {
+        auto tmp = next(it);
+        erase(it);
+        it = tmp;
+    }
 }
 
 template<class K, class V, class Compare, typename TRandom, int MaxLevel>

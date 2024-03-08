@@ -36,8 +36,8 @@ public:
     skiplist(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk);
     skiplist<K, V, Compare, TRandom, MaxLevel>& operator=(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk);
 
-    ~skiplist();
-    size_t size() const;
+    ~skiplist() { clear(); }
+    size_t size() const { return nb; }
     void clear();
     double get_prob() const { return prob; }
     bool exists(const K& e) const;
@@ -53,8 +53,8 @@ public:
     void sketch(orientation orient=VERTICAL) const;
     
     void print() const;
-    bool empty() const;
-    unsigned int count(const K& e) const;
+    bool empty() const { return nb==0; }
+    unsigned int count(const K& e) const { return (exists(e))? 1 : 0; }
     const K& front() const;
     const K& back() const;
 
@@ -84,7 +84,6 @@ public:
     const_iterator upper_bound(const K& e) const;
 
     void swap(skiplist& sk);
-    
 
     class iterator : public std::iterator< std::bidirectional_iterator_tag, value_type>
     {
@@ -253,22 +252,6 @@ void skiplist<K, V, Compare, TRandom, MaxLevel>::clear() {
 }
 
 template<class K, class V, class Compare, typename TRandom, int MaxLevel>
-skiplist<K, V, Compare, TRandom, MaxLevel>::~skiplist() {
-    clear();
-}
-
-template<class K, class V, class Compare, typename TRandom, int MaxLevel>
-size_t skiplist<K, V, Compare, TRandom, MaxLevel>::size() const {
-    return nb;
-}
-
-template<class K, class V, class Compare, typename TRandom, int MaxLevel>
-bool skiplist<K, V, Compare, TRandom, MaxLevel>::empty() const {
-    return nb == 0;
-    // return levels.front() == nullptr;
-}
-
-template<class K, class V, class Compare, typename TRandom, int MaxLevel>
 bool skiplist<K, V, Compare, TRandom, MaxLevel>::exists(const K& e) const {
     if(empty()) return false;
     SLNode<K, V>* p = levels.back();
@@ -391,11 +374,6 @@ void skiplist<K, V, Compare, TRandom, MaxLevel>::insert (InputIterator first_ele
     for(auto it=first_element; it != last_element; ++it) {
         insert({it->first, it->second});      
     }
-}
-
-template<class K, class V, class Compare, typename TRandom, int MaxLevel>
-unsigned int skiplist<K, V, Compare, TRandom, MaxLevel>::count(const K& e) const {
-    return (exists(e))? 1 : 0;
 }
 
 template<class K, class V, class Compare, typename TRandom, int MaxLevel>

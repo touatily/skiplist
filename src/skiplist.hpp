@@ -62,15 +62,15 @@ public:
     const V& at(const K& k) const;
     V& at(const K& k);
 
-    iterator begin() { return iterator(levels.front()); }
-    iterator end() { return iterator(nullptr); }
-    iterator rbegin() { return iterator(nullptr); }
-    iterator rend() { return iterator(last); }
+    iterator begin() { return iterator(*this, levels.front()); }
+    iterator end() { return iterator(*this, nullptr); }
+    iterator rbegin() { return iterator(*this, nullptr); }
+    iterator rend() { return iterator(*this, last); }
 
-    const_iterator cbegin() const { return const_iterator(levels.front()); }
-    const_iterator cend() const { return const_iterator(nullptr); }
-    const_iterator crbegin() const { return const_iterator(nullptr); }
-    const_iterator crend() const { return const_iterator(last); }
+    const_iterator cbegin() const { return const_iterator(*this, levels.front()); }
+    const_iterator cend() const { return const_iterator(*this, nullptr); }
+    const_iterator crbegin() const { return const_iterator(*this, nullptr); }
+    const_iterator crend() const { return const_iterator(*this, last); }
 
     size_t erase(const K& e);
     void erase(iterator it);
@@ -88,20 +88,42 @@ public:
     class iterator : public std::iterator< std::bidirectional_iterator_tag, value_type>
     {
     public:
-        iterator(SLNode<K, V>* c=nullptr): current(c) {}
+        iterator(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk, SLNode<K, V>* c=nullptr): sk(&sk), current(c) {}
 
         const value_type& operator*() const { return current->get_key_value(); }
         const value_type* operator->() const { return &(current->get_key_value()); }
 
-        iterator& operator++() { current = current->get_next(); return *this; }  
-        iterator operator++(int) { iterator tmp = *this; current = current->get_next(); return tmp; }
-        iterator& operator--() { current = current->get_prev(); return *this; }  
-        iterator operator--(int) { iterator tmp = *this; current = current->get_prev(); return tmp; }
+        iterator& operator++() { 
+            if(! current) current = sk->levels.front();  
+            else current = current->get_next(); 
+            return *this;  
+        }  
+        iterator operator++(int) { 
+            iterator tmp = *this; 
+            if(! current) current = sk->levels.front();  
+            else current = current->get_prev(); 
+            return tmp; 
+         }
+        iterator& operator--() { 
+            if(! current) current = sk->last;  
+            else current = current->get_prev(); 
+            return *this; 
+        }  
+        iterator operator--(int) { 
+            iterator tmp = *this; 
+            if(! current) current = sk->last;  
+            else current = current->get_prev(); 
+            return tmp; 
+        }
         iterator operator+(int n) {
             auto it = *this;
             while(it.current && n > 0) {
                 it.current = it.current->get_next();
                 n--;
+            }
+            while(it.current && n < 0) {
+                it.current = it.current->get_prev();
+                n++;
             }
             return it;
         }
@@ -111,35 +133,61 @@ public:
                 it.current = it.current->get_prev();
                 n--;
             }
+            while(it.current && n < 0) {
+                it.current = it.current->get_next();
+                n++;
+            }
             return it;
         } 
 
-        friend bool operator== (const iterator& a, const iterator& b)  { return a.current == b.current; }
-        friend bool operator!= (const iterator& a, const iterator& b)  { return a.current != b.current; }
+        friend bool operator== (const iterator& a, const iterator& b)  { return a.current==b.current && a.sk==b.sk; }
+        friend bool operator!= (const iterator& a, const iterator& b)  { return a.current!=b.current || a.sk!=b.sk; }
         friend void skiplist<K, V, Compare, TRandom, MaxLevel>::erase(iterator it);
     private:
         SLNode<K, V>* current;
-
+        const skiplist<K, V, Compare, TRandom, MaxLevel>* sk;
         friend const_iterator::const_iterator(const iterator& it);
     };
 
     class const_iterator : public std::iterator< std::bidirectional_iterator_tag, value_type>
     {
     public:
-        const_iterator(SLNode<K, V>* c=nullptr): current(c) {}
-        const_iterator(const iterator& it): current(it.current) {}
+        const_iterator(const skiplist<K, V, Compare, TRandom, MaxLevel>& sk, SLNode<K, V>* c=nullptr): sk(&sk), current(c) {}
+        const_iterator(const iterator& it): sk(it.sk), current(it.current) {}
         const value_type& operator*() const { return current->get_key_value(); }
         const value_type* const operator->() const { return &(current->get_key_value()); }
 
-        const_iterator& operator++() { current = current->get_next(); return *this; }  
-        const_iterator operator++(int) { const_iterator tmp = *this; current = current->get_next(); return tmp; }
-        const_iterator& operator--() { current = current->get_prev(); return *this; }  
-        const_iterator operator--(int) { const_iterator tmp = *this; current = current->get_prev(); return tmp; }
+        const_iterator& operator++() { 
+            if(! current) current = sk->levels.front();  
+            else current = current->get_next(); 
+            return *this;  
+        }  
+        const_iterator operator++(int) { 
+            const_iterator tmp = *this; 
+            if(! current) current = sk->levels.front();  
+            else current = current->get_prev(); 
+            return tmp; 
+         }
+        const_iterator& operator--() { 
+            if(! current) current = sk->last;  
+            else current = current->get_prev(); 
+            return *this; 
+        }  
+        const_iterator operator--(int) { 
+            const_iterator tmp = *this; 
+            if(! current) current = sk.last;  
+            else current = current->get_prev(); 
+            return tmp; 
+        }
         const_iterator operator+(int n) {
             auto it = *this;
             while(it.current && n > 0) {
                 it.current = it.current->get_next();
                 n--;
+            }
+            while(it.current && n < 0) {
+                it.current = it.current->get_prev();
+                n++;
             }
             return it;
         }
@@ -149,13 +197,18 @@ public:
                 it.current = it.current->get_prev();
                 n--;
             }
+            while(it.current && n < 0) {
+                it.current = it.current->get_next();
+                n++;
+            }
             return it;
         } 
 
-        friend bool operator== (const const_iterator& a, const const_iterator& b)  { return a.current == b.current; };
-        friend bool operator!= (const const_iterator& a, const const_iterator& b)  { return a.current != b.current; };  
+        friend bool operator== (const const_iterator& a, const const_iterator& b)  { return a.current==b.current && a.sk==b.sk; };
+        friend bool operator!= (const const_iterator& a, const const_iterator& b)  { return a.current!=b.current || a.sk!=b.sk; };  
     private:
         SLNode<K, V>* current;
+        const skiplist<K, V, Compare, TRandom, MaxLevel>* sk;
     };
 };
 
@@ -323,7 +376,7 @@ std::pair<typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator, bool> s
                 previous[i] = previous[i]->get_next();
             }
             if(previous[i]->get_next() && previous[i]->get_next()->get_key() == *p.first) {
-                return {previous[i]->get_next(), false};
+                return { iterator(*this, previous[i]->get_next()), false };
             }
             previous[i-1] = previous[i]->get_down();
             i--;
@@ -332,7 +385,7 @@ std::pair<typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator, bool> s
         while(previous[0]->get_next() && Compare()(previous[0]->get_next()->get_key(), *p.first)) {
             previous[0] = previous[0]->get_next();
         }
-        if(previous[0]->get_next() && previous[0]->get_next()->get_key() == *p.first) return {previous[0]->get_next(), false};
+        if(previous[0]->get_next() && previous[0]->get_next()->get_key() == *p.first) return { iterator(*this, previous[0]->get_next()), false };
 
         // add to level 0
         const K* const k = new K(*p.first);
@@ -357,7 +410,7 @@ std::pair<typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator, bool> s
             i++;
         }
         nb++;
-        return {iterator(node), true};
+        return {iterator(*this, node), true};
     }
 }
 
@@ -404,7 +457,7 @@ typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator skiplist<K, V, Com
             while(p->get_down()) {
                 p = p->get_down();
             }
-            return iterator(p);
+            return iterator(*this, p);
         }
         p = p->get_down();
     }
@@ -515,12 +568,12 @@ typename skiplist<K, V, Compare, TRandom, MaxLevel>::iterator skiplist<K, V, Com
             while(p->get_down()) {
                 p = p->get_down();
             }
-            return iterator(p);
+            return iterator(*this, p);
         }
         q = p;
         p = p->get_down();
     }
-    return iterator(q->get_next());
+    return iterator(*this, q->get_next());
 }
 
 template<class K, class V, class Compare, typename TRandom, int MaxLevel>
